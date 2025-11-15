@@ -43,16 +43,16 @@ def _print_help() -> None:
     print("Функции:")
     print("<command> insert into <имя_таблицы> values (<значение1>, <значение2>," \
     "...) - создать запись.")
-    print("<command> select from <имя_таблицы> where <столбец> = <значение> -" \
+    print("<command> select from <имя_таблицы> where <столбец> = <значение> - " \
     "прочитать записи по условию.")
     print("<command> select from <имя_таблицы> - прочитать все записи.")
-    print("<command> update <имя_таблицы> set <столбец1> = <новое_значение1>" \
+    print("<command> update <имя_таблицы> set <столбец1> = <новое_значение1> " \
     "where <столбец_условия> = <значение_условия> - обновить запись.")
-    print("<command> delete from <имя_таблицы> where <столбец> = <значение> -" \
+    print("<command> delete from <имя_таблицы> where <столбец> = <значение> - " \
     "удалить запись.")
     print("<command> info <имя_таблицы> - вывести информацию о таблице.")
     print("<command> exit - выход из программы.")
-    print("<command> help- справочная информация.")
+    print("<command> help - справочная информация.")
 
 def _parse_column_defs(raw_columns: List[str]) -> List[Tuple[str, str]]:
     """
