@@ -6,12 +6,12 @@
 
 import re
 import shlex
-
 from typing import Any, Dict, List, Optional, Tuple
+
+from .decorators import create_cacher
 from prettytable import PrettyTable
 from prompt import string
 
-from decorators import create_cacher
 from .core import (
     VALID_TYPES,
     create_table,
@@ -22,12 +22,7 @@ from .core import (
     select,
     update,
 )
-from .utils import (
-    load_metadata,
-    load_table_data,
-    save_metadata,
-    save_table_data
-)
+from .utils import load_metadata, load_table_data, save_metadata, save_table_data
 
 select_cache = create_cacher()
 

@@ -7,7 +7,7 @@
 
 from typing import Any, Dict, List, Optional, Tuple
 
-from decorators import handle_db_errors, confirm_action, log_time
+from .decorators import confirm_action, handle_db_errors, log_time
 
 # Допустимые типы столбцов
 VALID_TYPES = {"int", "str", "bool"}

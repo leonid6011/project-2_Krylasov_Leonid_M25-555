@@ -6,7 +6,6 @@ import time
 from functools import wraps
 from typing import Any, Callable, Dict, Hashable
 
-
 Func = Callable[..., Any]
 
 def handle_db_errors(func: Func) -> Func:
