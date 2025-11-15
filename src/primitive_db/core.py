@@ -7,6 +7,8 @@
 
 from typing import Any, Dict, List, Optional, Tuple
 
+from decorators import handle_db_errors, confirm_action, log_time
+
 # Допустимые типы столбцов
 VALID_TYPES = {"int", "str", "bool"}
 
@@ -38,7 +40,12 @@ def _validate_columns(columns: List[ColumnDef]) -> None:
             )
         seen.add(name)
 
-def create_table(metadata: Metadata, table_name: str, columns: List[ColumnDef]):
+@handle_db_errors
+def create_table(
+    metadata: Metadata,
+    table_name: str,
+    columns: List[ColumnDef]
+    ) -> List[ColumnDef]:
     """
     Слздаем таблицу в базе данных.
     Возвращает полный список столбцов.
@@ -49,10 +56,11 @@ def create_table(metadata: Metadata, table_name: str, columns: List[ColumnDef]):
     _validate_columns(columns)
 
     full_columns = [("ID", "int"), *columns]
-
     metadata[table_name] = {name: col_type for name, col_type in full_columns}
     return full_columns
 
+@confirm_action("удаление таблицы")
+@handle_db_errors
 def drop_table(metadata: Metadata, table_name: str) -> None:
     """
     Удаляем таблицу из метаданных.
@@ -80,12 +88,14 @@ def _row_matches(row: Row, where_clause: Optional[Dict[str, Any]]) -> bool:
             return False
     return True
 
+@log_time
+@handle_db_errors
 def insert(
         metadata: Metadata,
         table_name: str,
         table_data: List[Row],
         values: List[Any]
-):
+) -> Tuple[List[Row], int]:
     """
     Добавить новую запись в таблицу. 
     """
@@ -135,6 +145,8 @@ def insert(
     table_data.append(new_row)
     return table_data, new_id
 
+@log_time
+@handle_db_errors
 def select(
         table_data: List[Row],
         where_clause: Optional[Dict[str, Any]] = None
@@ -145,26 +157,36 @@ def select(
     """
     return [row for row in table_data if _row_matches(row, where_clause)]
 
+@handle_db_errors
 def update(
         table_data: List[Row],
         set_clause: Dict[str, Any],
         where_clause: Optional[Dict[str, Any]]
-):
+) -> Tuple[List[Row], List[int]]:
     """
-    Обновить зписи по условию where_clause согласно set_clause.
+    Обновить записи по условию where_clause согласно set_clause.
     """
     updated_ids: List[int] = []
 
     for row in table_data:
         if _row_matches(row, where_clause):
             for key, value in set_clause.items():
+                if key not in row:
+                    raise ValueError(
+                        f'Столбец "{key}" не существует в таблице.'
+                    )
+                row[key] = value
+            if isinstance(row.get("ID"), int):    
                 updated_ids.append(row["ID"])
+
     return table_data, updated_ids
 
+@confirm_action("удаление записей")
+@handle_db_errors
 def delete(
         table_data: List[Row],
         where_clause: Optional[Dict[str, Any]]
-):
+) -> Tuple[List[Row], List[int]]:
     """
     Удаляет записи по условию where_cause.
     """

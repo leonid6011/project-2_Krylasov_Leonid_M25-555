@@ -6,11 +6,12 @@
 
 import re
 import shlex
-from typing import Any, Dict, List, Optional, Tuple
 
+from typing import Any, Dict, List, Optional, Tuple
 from prettytable import PrettyTable
 from prompt import string
 
+from decorators import create_cacher
 from .core import (
     VALID_TYPES,
     create_table,
@@ -21,24 +22,26 @@ from .core import (
     select,
     update,
 )
-from .utils import load_metadata, load_table_data, save_metadata, save_table_data
+from .utils import (
+    load_metadata,
+    load_table_data,
+    save_metadata,
+    save_table_data
+)
 
+select_cache = create_cacher()
 
 def _print_help() -> None:
     """
     Prints the help message for the current mode.
     """
    
-    #print("\n***Процесс работы с таблицей***")
-    #print("Функции:")
-    #print("<command> create_table <имя_таблицы> <столбец1:тип> .. - создать таблицу")
-    #print("<command> list_tables - показать список всех таблиц")
-    #print("<command> drop_table <имя_таблицы> - удалить таблицу")
+    print("\n***Процесс работы с таблицей***")
+    print("Функции:")
+    print("<command> create_table <имя_таблицы> <столбец1:тип> .. - создать таблицу")
+    print("<command> list_tables - показать список всех таблиц")
+    print("<command> drop_table <имя_таблицы> - удалить таблицу")
     
-    #print("\nОбщие команды:")
-    #print("<command> exit - выход из программы")
-    #print("<command> help - справочная информация\n")
-
     print("\n***Операции с данными***")
     print("Функции:")
     print("<command> insert into <имя_таблицы> values (<значение1>, <значение2>," \
@@ -51,6 +54,8 @@ def _print_help() -> None:
     print("<command> delete from <имя_таблицы> where <столбец> = <значение> - " \
     "удалить запись.")
     print("<command> info <имя_таблицы> - вывести информацию о таблице.")
+
+    print("\nОбщие команды:")
     print("<command> exit - выход из программы.")
     print("<command> help - справочная информация.")
 
@@ -58,7 +63,8 @@ def _parse_column_defs(raw_columns: List[str]) -> List[Tuple[str, str]]:
     """
     Разбор аргументов формата <имя:тип>.
     """
-    columns = []
+    columns: List[Tuple[str, str]] = []
+
     for raw in raw_columns:
         if ":" not in raw or raw.count(":") != 1:
             raise ValueError(
@@ -70,8 +76,10 @@ def _parse_column_defs(raw_columns: List[str]) -> List[Tuple[str, str]]:
         type_name = type_name.strip()
 
         if not name or not type_name:
-            raise ValueError(f'Некорректное определение столбца "{raw}".')
-        
+            raise ValueError(
+                f'Некорректное определение столбца "{raw}".'
+                'Ожидается формат "<имя:тип>".'
+            )
         if type_name not in VALID_TYPES:
             raise ValueError(
                 f'Недопустимый тип "{type_name}" для столбца "{name}". '
@@ -261,11 +269,9 @@ def run() -> None:
                 )
                 continue
             table_name = parts[1]
-            
-            try:
-                drop_table(metadata, table_name)
-            except ValueError as exc:
-                print(f"Ошибка: {exc}")
+
+            result = drop_table(metadata, table_name)
+            if result is None:
                 continue
 
             save_metadata(metadata)
@@ -292,20 +298,25 @@ def run() -> None:
                     )
                 inner = values_part[1:-1]
                 values = _parse_values_list(inner)
-
-                if table_name not in metadata:
-                    print(f'Ошибка: Таблица "{table_name}" не существует.')
-                    continue
-
-                table_data = load_table_data(table_name)
-                table_data, new_id = insert(metadata, table_name, table_data, values)
-                save_table_data(table_name, table_data)
-
-                print(
-                    f'Запись с ID={new_id} успешно добавлена в таблицу "{table_name}".'
-                )
             except ValueError as exc:
                 print(f"Ошибка: {exc}")
+                continue
+
+            if table_name not in metadata:
+                print(f'Ошибка: Таблица "{table_name}" не существует.')
+                continue
+
+            table_data = load_table_data(table_name)
+            result = insert(metadata, table_name, table_data, values)
+            if result is None:
+                continue
+
+            table_data, new_id = result
+            save_table_data(table_name, table_data)
+
+            print(
+                f'Запись с ID={new_id} успешно добавлена в таблицу "{table_name}".'
+            )
             continue
 
         # select from <table>
@@ -323,16 +334,23 @@ def run() -> None:
                         where_index + len(" where "):
                     ].strip()
                     where_clause = _parse_where_clause(where_text)
-                
-                if table_name not in metadata:
-                    print(f'Ошибка: Таблица "{table_name}" не существует.')
-                    continue
-
-                table_data = load_table_data(table_name)
-                rows = select(table_data, where_clause)
-                _print_table(table_name, metadata, rows)
             except ValueError as exc:
                 print(f"Ошибка: {exc}")
+                continue
+            if table_name not in metadata:
+                print(f'Ошибка: Таблица "{table_name}" не существует.')
+                continue
+
+            table_data = load_table_data(table_name)
+            cache_key = (table_name, repr(where_clause))
+
+            rows = select_cache(
+                cache_key,
+                lambda: select(table_data, where_clause)
+            )
+            if rows is None:
+                continue
+            _print_table(table_name, metadata, rows)
             continue
         
         #update <table> set
@@ -356,25 +374,29 @@ def run() -> None:
 
                 set_clause = _parse_set_clause(set_text)
                 where_clause = _parse_where_clause(where_text)
-
-                if table_name not in metadata:
-                    print(f'Ошибка: Таблица "{table_name}" не существует.')
-                    continue
-
-                table_data = load_table_data(table_name)
-                table_data, updated_ids = update(table_data,  set_clause, where_clause)
-                save_table_data(table_name, table_data)
-
-                if not updated_ids:
-                    print("Под походящее условие не попала ни одна запись.")
-                else:
-                    for rec_id in updated_ids:
-                        print(
-                            f'Запись с ID={rec_id} в таблце "{table_name}" '
-                            f'успешно обновлена'
-                        )
             except ValueError as exc:
                 print(f"Ошибка: {exc}")
+                continue
+                
+            if table_name not in metadata:
+                print(f'Ошибка: Таблица "{table_name}" не существует.')
+                continue
+
+            table_data = load_table_data(table_name)
+            result = update(table_data,  set_clause, where_clause)
+            if result is None:
+                continue
+            table_data, updated_ids = result
+            save_table_data(table_name, table_data)
+
+            if not updated_ids:
+                print("Под походящее условие не попала ни одна запись.")
+            else:
+                for rec_id in updated_ids:
+                    print(
+                        f'Запись с ID={rec_id} в таблце "{table_name}" '
+                        f'успешно обновлена'
+                    )
             continue
 
         #delete from <table> where
@@ -393,25 +415,31 @@ def run() -> None:
                     where_index + len(" where "):
                 ].strip()
                 where_clause = _parse_where_clause(where_text)
-
-                if table_name not in metadata:
-                    print(f'Ошибка: Таблица "{table_name}" не существует.')
-                    continue
-
-                table_data = load_table_data(table_name)
-                new_data, deleted_ids = delete(table_data, where_clause)
-                save_table_data(table_name, new_data)
-
-                if not deleted_ids:
-                    print("Под подходящее условие не попала и одна запись.")
-                else:
-                    for rec_id in deleted_ids:
-                        print(
-                            f'Запись с ID={rec_id} успешно удалена из таблицы '
-                            f'"{table_name}".'
-                        )
             except ValueError as exc:
                 print(f"Ошибка: {exc}")
+                continue
+
+            if table_name not in metadata:
+                print(f'Ошибка: Таблица "{table_name}" не существует.')
+                continue
+
+            table_data = load_table_data(table_name)
+
+            result = delete(table_data, where_clause)
+            if result is None:
+                continue
+
+            new_data, deleted_ids = result
+            save_table_data(table_name, new_data)
+
+            if not deleted_ids:
+                print("Под подходящее условие не попала и одна запись.")
+            else:
+                for rec_id in deleted_ids:
+                    print(
+                        f'Запись с ID={rec_id} успешно удалена из таблицы '
+                        f'"{table_name}".'
+                    )
             continue
         
         # info <table>
