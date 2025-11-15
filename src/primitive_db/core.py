@@ -5,7 +5,7 @@
 """
 
 
-from typing import Dict, List, Tuple, Any, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 # Допустимые типы столбцов
 VALID_TYPES = {"int", "str", "bool"}
@@ -125,7 +125,8 @@ def insert(
             if isinstance(row.get("ID"), int)
         ]
         new_id = (max(existing_ids) + 1 if existing_ids else 1)
-    else: new_id = 1
+    else:
+        new_id = 1
 
     new_row: Row = {"ID": new_id}
     for col_name, value in zip(non_id_columns, values):
