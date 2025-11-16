@@ -21,7 +21,6 @@ from .core import (
     select,
     update,
 )
-from .decorators import create_cacher
 from .parser import (
     _parse_column_defs,
     _parse_set_clause,
@@ -29,6 +28,7 @@ from .parser import (
     _parse_where_clause,
 )
 from .utils import load_metadata, load_table_data, save_metadata, save_table_data
+
 
 def _print_help() -> None:
     """
