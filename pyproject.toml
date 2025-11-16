@@ -14,7 +14,7 @@ prompt = "^0.4.1"
 prettytable = "^3.17.0"
 
 [tool.poetry.scripts]
-database = "src.primitive_db.main:main"
+database = "primitive_db.main:main"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.14.4"
