@@ -8,7 +8,6 @@ import re
 import shlex
 from typing import Any, Dict, List, Optional, Tuple
 
-from .decorators import create_cacher
 from prettytable import PrettyTable
 from prompt import string
 
@@ -22,6 +21,7 @@ from .core import (
     select,
     update,
 )
+from .decorators import create_cacher
 from .utils import load_metadata, load_table_data, save_metadata, save_table_data
 
 select_cache = create_cacher()
@@ -224,7 +224,7 @@ def run() -> None:
             else:
                 for name in tables:
                     print(f"- {name}")
-                continue
+            continue
         #create_table
         if command == "create_table":
             if len(parts) < 3:
@@ -239,11 +239,16 @@ def run() -> None:
 
             try:
                 columns = _parse_column_defs(raw_columns)
-                full_columns = create_table(metadata, table_name, columns)
             except ValueError as exc:
                 print(f"Ошибка: {exc}")
                 continue
-        
+
+            result = create_table(metadata, table_name, columns)
+            if result is None:
+                continue
+            
+            metadata, full_columns = result
+
             save_metadata(metadata)
 
             cols_str = ", ".join(
@@ -460,6 +465,6 @@ def run() -> None:
 
         #unknown_command
         print(
-            "Ошибка: неизвествна команда.\n"
+            "Ошибка: неизвестная команда.\n"
             'Введите "help" для просмотра доступных команд.'
         )

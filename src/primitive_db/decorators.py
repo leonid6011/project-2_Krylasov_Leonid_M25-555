@@ -40,7 +40,7 @@ def confirm_action(action_name: str) -> Callable[[Func], Func]:
             answer = input(
                 f'Вы уверены, что хотите выполнить "{action_name}"? [y/n]:'
             )
-            if answer.strip().lower != "y":
+            if answer.strip().lower() != "y":
                 print("Операция отменена.")
                 return None
             return func(*args, **kwargs)
@@ -58,7 +58,7 @@ def log_time(func: Func) -> Func:
         start = time.monotonic()
         result = func(*args, **kwargs)
         elapsed = time.monotonic() - start
-        print(f"Функция {func.__name__} выполнилась за {elapsed:.3f} секунд.")
+        print(f"Функция {func.__name__} выполнилась за {elapsed:.6f} секунд.")
         return result
 
     return wrapper
