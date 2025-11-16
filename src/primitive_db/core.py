@@ -9,9 +9,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from .decorators import confirm_action, handle_db_errors, log_time
 
-# Допустимые типы столбцов
-VALID_TYPES = {"int", "str", "bool"}
-
 # Допустимые типы аннотаций
 Metadata = Dict[str, Dict[str, str]]
 ColumnDef = Tuple[str, str]
