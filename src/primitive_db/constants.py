@@ -1,7 +1,15 @@
 # src/primitive_db/constants.py
 
+from pathlib import Path
+
 # Допустимые типы столбцов
 VALID_TYPES = {"int", "str", "bool"}
+
+# Файл, в котором храним описание таблиц.
+METADATA_FILE = Path("db_meta.json")
+
+# Папка где хранятся данные таблиц
+DATA_DIR = Path("data")
 
 HELP_INFO = (
     "***Процесс работы с таблицей***"

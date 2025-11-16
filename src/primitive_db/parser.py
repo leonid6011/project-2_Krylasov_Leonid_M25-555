@@ -51,8 +51,8 @@ def _parse_value(raw: str) -> Any:
     
     try:
         return int(raw)
-    except ValueError:
-        raise (f"Не удалось распознать значение {raw!r}.")
+    except ValueError as exc:
+        raise ValueError(f"Не удалось распознать значение {raw!r}.") from exc
     
 
 def _parse_values_list(text: str) -> List[Any]:

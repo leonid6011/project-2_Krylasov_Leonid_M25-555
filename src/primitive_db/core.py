@@ -8,6 +8,7 @@
 from typing import Any, Dict, List, Optional, Tuple
 
 from .decorators import confirm_action, handle_db_errors, log_time
+from .utils import delete_table_data
 
 # Допустимые типы аннотаций
 Metadata = Dict[str, Dict[str, str]]
@@ -40,7 +41,7 @@ def drop_table(metadata: Metadata, table_name: str) -> None:
     """
     if table_name not in metadata:
         raise ValueError(f'Таблица "{table_name}" не существует.')
-    
+    delete_table_data(table_name)
     del metadata[table_name]
     return metadata
 

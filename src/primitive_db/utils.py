@@ -5,14 +5,10 @@
 """
 
 import json
-from pathlib import Path
 from typing import Any, Dict, List
 
-# Файл, в котором храним описание таблиц.
-METADATA_FILE = Path("db_meta.json")
+from .constants import DATA_DIR, METADATA_FILE
 
-# Папка где хранятся данные таблиц
-DATA_DIR = Path("data")
 
 def load_metadata() -> Dict[str, Dict[str, str]]:
     """
@@ -48,6 +44,14 @@ def save_metadata(metadata: Dict[str, Dict[str, str]]) -> None:
     """
     with METADATA_FILE.open("w", encoding="utf-8")  as f:
         json.dump(metadata, f, ensure_ascii=False, indent=2)
+
+def delete_table_data(table_name: str) -> None:
+    """
+    Удаляет json файл содержимого таблицы, если удаляется сама таблица.
+    """
+    table_path = DATA_DIR / f"{table_name}.json"
+    if table_path.exists():
+        table_path.unlink()
 
 def load_table_data(table_name: str) -> List[Dict[str, Any]]:
     """
