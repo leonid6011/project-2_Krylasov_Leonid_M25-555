@@ -5,7 +5,7 @@ description = "Простая реализация базы данных на Py
 authors = ["Leonid <leonid6011@gmail.com>"]
 readme = "README.md"
 packages = [
-    { include = "src" },
+    { include = "primitive_db", from = "src" },
 ]
  
 [tool.poetry.dependencies]
