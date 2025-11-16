@@ -30,8 +30,6 @@ from .parser import (
 )
 from .utils import load_metadata, load_table_data, save_metadata, save_table_data
 
-select_cache = create_cacher()
-
 def _print_help() -> None:
     """
     Печать "help" сообщения с коммандами
@@ -225,19 +223,18 @@ def run() -> None:
             except ValueError as exc:
                 print(f"Ошибка: {exc}")
                 continue
+
             if table_name not in metadata:
                 print(f'Ошибка: Таблица "{table_name}" не существует.')
                 continue
 
             table_data = load_table_data(table_name)
-            cache_key = (table_name, repr(where_clause))
+            rows = select(table_data, where_clause)
 
-            rows = select_cache(
-                cache_key,
-                lambda: select(table_data, where_clause)
-            )
             if rows is None:
+                print("Записей не найдено.")
                 continue
+            
             _print_table(table_name, metadata, rows)
             continue
         

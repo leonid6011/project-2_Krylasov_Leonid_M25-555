@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 from functools import wraps
-from typing import Any, Callable, Dict, Hashable
+from typing import Any, Callable, Dict, Hashable, Tuple
 
 Func = Callable[..., Any]
 
@@ -63,7 +63,10 @@ def log_time(func: Func) -> Func:
 
     return wrapper
 
-def create_cacher() -> Callable[[Hashable, Callable[[], Any]], Any]:
+def create_cacher() -> Tuple[
+    Callable[[Hashable, Callable[[], Any]], Any],
+    Callable[[], None]
+]:
     """
     Создание функции для кеширования результатов
     """
@@ -76,4 +79,7 @@ def create_cacher() -> Callable[[Hashable, Callable[[], Any]], Any]:
         cache[key] = value
         return value
     
-    return cache_result
+    def clear_cache() -> None:
+        cache.clear()
+    
+    return cache_result, clear_cache

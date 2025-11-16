@@ -7,8 +7,10 @@
 
 from typing import Any, Dict, List, Optional, Tuple
 
-from .decorators import confirm_action, handle_db_errors, log_time
+from .decorators import confirm_action, create_cacher, handle_db_errors, log_time
 from .utils import delete_table_data
+
+select_cache, clear_cache = create_cacher()
 
 # Допустимые типы аннотаций
 Metadata = Dict[str, Dict[str, str]]
@@ -31,6 +33,7 @@ def create_table(
     full_columns: List[Tuple[str, str]] = [("ID", "int"),] + columns
 
     metadata[table_name] = {name: type_name for name, type_name in full_columns}
+    clear_cache()
     return metadata, full_columns
 
 @confirm_action("удаление таблицы")
@@ -43,6 +46,7 @@ def drop_table(metadata: Metadata, table_name: str) -> None:
         raise ValueError(f'Таблица "{table_name}" не существует.')
     delete_table_data(table_name)
     del metadata[table_name]
+    clear_cache()
     return metadata
 
 def list_tables(metadata: Metadata) -> List[str]:
@@ -118,6 +122,7 @@ def insert(
         new_row[col_name] = value
 
     table_data.append(new_row)
+    clear_cache()
     return table_data, new_id
 
 @log_time
@@ -130,7 +135,17 @@ def select(
     Вернуть список записей, удовлетворяющих where_clause.
     Если where_clause не задан, возвращает все записи.
     """
-    return [row for row in table_data if _row_matches(row, where_clause)]
+    key = (
+        "select",
+        tuple(frozenset(row.items()) for row in table_data),
+        frozenset(where_clause.items()) if where_clause else None
+    )
+    def compute() -> List[Row]:
+        if where_clause is None:
+            return table_data.copy()
+        return[row for row in table_data if _row_matches(row, where_clause)]
+    
+    return select_cache(key, compute)
 
 @handle_db_errors
 def update(
@@ -153,7 +168,7 @@ def update(
                 row[key] = value
             if isinstance(row.get("ID"), int):    
                 updated_ids.append(row["ID"])
-
+    clear_cache()
     return table_data, updated_ids
 
 @confirm_action("удаление записей")
@@ -174,4 +189,5 @@ def delete(
                 deleted_ids.append(row["ID"])
         else:
             remaining.append(row)
+    clear_cache()
     return remaining, deleted_ids
